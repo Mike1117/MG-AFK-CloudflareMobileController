@@ -7,6 +7,7 @@ import { categoryCounts, matches, sortCatalog, toggleTrough, troughQuota, wishli
 import { defaultConfig, type CatalogItem, type SessionConfig, type ShopsResponse, type ShopItemType, type StatusResponse, type WishlistEntry } from "./types";
 
 type Page = "overview" | "protected" | "wishlist" | "trough" | "settings";
+type ProtectedSortMode = "selected" | SortMode;
 
 export class MobileController {
   private credentials: Credentials;
@@ -22,6 +23,7 @@ export class MobileController {
   private search = { protected: "", wishlist: "", trough: "" };
   private wishlistType: ShopItemType = "Seed";
   private sortMode: SortMode = "price-desc";
+  private protectedSortMode: ProtectedSortMode = "selected";
   private readonly debounces = new Map<string, ReturnType<typeof setTimeout>>();
   private statusPoller: Poller | null = null;
   private shopsPoller: Poller | null = null;
@@ -215,14 +217,32 @@ export class MobileController {
 
   private protectedPage(): HTMLElement {
     const selected = new Set(this.config.autoHarvest.protectedCropIds);
-    return this.catalogPage("Choose crops Auto Harvest must leave untouched. Gold is controlled separately on Overview.",
-      `${selected.size} selected`, "protected", withUnknownPlants(this.plants(), [...selected]), selected,
-      (item) => {
-        selected.has(item.itemId) ? selected.delete(item.itemId) : selected.add(item.itemId);
-        this.config.autoHarvest.protectedCropIds = [...selected];
-        this.renderPage();
-        this.debounce("protected", { autoHarvest: { protectedCropIds: [...selected] } });
-      });
+    const options = el("select", { attrs: { "aria-label": "Sort protected crops" } });
+    const sortOptions: Array<[ProtectedSortMode, string]> = [
+      ["selected", "Selected first"], ["price-desc", "Price high → low"], ["price-asc", "Price low → high"],
+      ["rarity-desc", "Rarity"], ["name-asc", "Name A → Z"], ["name-desc", "Name Z → A"],
+    ];
+    for (const [value, label] of sortOptions) {
+      const option = el("option", { text: label, attrs: { value } });
+      option.selected = value === this.protectedSortMode;
+      options.append(option);
+    }
+    options.addEventListener("change", () => { this.protectedSortMode = options.value as ProtectedSortMode; this.renderPage(); });
+    const filtered = withUnknownPlants(this.plants(), [...selected]).filter((item) => matches(item, this.search.protected));
+    const sorted = this.protectedSortMode === "selected"
+      ? filtered.sort((a, b) => Number(selected.has(b.itemId)) - Number(selected.has(a.itemId)) || a.name.localeCompare(b.name))
+      : sortCatalog(filtered, this.protectedSortMode);
+    const grid = this.itemGrid(sorted, selected, (item) => {
+      selected.has(item.itemId) ? selected.delete(item.itemId) : selected.add(item.itemId);
+      this.config.autoHarvest.protectedCropIds = [...selected];
+      this.renderPage();
+      this.debounce("protected", { autoHarvest: { protectedCropIds: [...selected] } });
+    });
+    return el("section", {},
+      el("div", { className: "page-intro" },
+        el("p", { text: "Choose crops Auto Harvest must leave untouched. Gold is controlled separately on Overview." }),
+        el("strong", { text: `${selected.size} selected` })),
+      this.catalogToolbar("protected", options), this.catalogStateOr(grid));
   }
 
   private wishlistPage(): HTMLElement {
@@ -334,11 +354,6 @@ export class MobileController {
   private debounce(key: string, partial: object): void {
     const old = this.debounces.get(key); if (old) clearTimeout(old);
     this.debounces.set(key, setTimeout(() => { this.debounces.delete(key); void this.savePartial(partial); }, 500));
-  }
-
-  private catalogPage(description: string, count: string, key: "protected", catalog: CatalogItem[], selected: Set<string>, toggle: (item: CatalogItem) => void): HTMLElement {
-    const sorted = catalog.filter((item) => matches(item, this.search[key])).sort((a, b) => Number(selected.has(b.itemId)) - Number(selected.has(a.itemId)) || a.name.localeCompare(b.name));
-    return el("section", {}, el("div", { className: "page-intro" }, el("p", { text: description }), el("strong", { text: count })), this.catalogToolbar(key), this.catalogStateOr(this.itemGrid(sorted, selected, toggle)));
   }
 
   private catalogToolbar(key: "protected" | "wishlist" | "trough", extra?: HTMLElement): HTMLElement {

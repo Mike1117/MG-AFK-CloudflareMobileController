@@ -37,6 +37,9 @@ describe("controller security", () => {
     await app.start();
     expect(root.textContent).not.toContain("never-render-this-token");
     expect(fetcher.mock.calls.every(([url]) => !String(url).includes("never-render-this-token"))).toBe(true);
+    [...root.querySelectorAll("button")].find((button) => button.textContent?.includes("Protected"))?.click();
+    expect([...root.querySelectorAll<HTMLOptionElement>('select[aria-label="Sort protected crops"] option')]
+      .map((option) => [option.value, option.textContent])).toContainEqual(["price-desc", "Price high → low"]);
     app.dispose();
     root.remove();
     vi.unstubAllGlobals();
