@@ -1,0 +1,18 @@
+{
+  "name": "MG AFK Cloudflare",
+  "short_name": "MG AFK",
+  "description": "Mobile controller for MG-AFK-Cloudflare",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#282C34",
+  "theme_color": "#21252B",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
