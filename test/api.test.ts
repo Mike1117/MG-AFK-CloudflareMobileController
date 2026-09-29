@@ -35,10 +35,10 @@ describe("CloudflareApiClient", () => {
       return Response.json(String(input).endsWith("/config") ? { ...config, status } : status);
     });
     const api = new CloudflareApiClient("https://worker.example", "token", fetcher);
-    await api.start(); await api.stop(); await api.putConfig({ autoTrough: { wishlist: ["Lychee"] } });
-    expect(requests.map((item) => `${item.init?.method} ${new URL(item.url).pathname}`)).toEqual(["POST /start", "POST /stop", "PUT /config"]);
-    expect(JSON.parse(String(requests[2]!.init?.body))).toEqual({ autoTrough: { wishlist: ["Lychee"] } });
-    expect(new Headers(requests[2]!.init?.headers).get("Content-Type")).toBe("application/json");
+    await api.start(); await api.stop(); await api.harvest(); await api.putConfig({ autoTrough: { wishlist: ["Lychee"] } });
+    expect(requests.map((item) => `${item.init?.method} ${new URL(item.url).pathname}`)).toEqual(["POST /start", "POST /stop", "POST /harvest", "PUT /config"]);
+    expect(JSON.parse(String(requests[3]!.init?.body))).toEqual({ autoTrough: { wishlist: ["Lychee"] } });
+    expect(new Headers(requests[3]!.init?.headers).get("Content-Type")).toBe("application/json");
   });
 
   it("maps 401, network failures, and timeout", async () => {

@@ -48,6 +48,7 @@ export class CloudflareApiClient {
   getShops(signal?: AbortSignal): Promise<ShopsResponse> { return this.send("GET", "shops", undefined, signal); }
   start(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "start", undefined, signal); }
   stop(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "stop", undefined, signal); }
+  harvest(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "harvest", undefined, signal); }
   putConfig(partial: object, signal?: AbortSignal): Promise<ConfigUpdateResponse> {
     return this.send<ConfigUpdateResponse>("PUT", "config", partial, signal).then((response) => ({
       ...response, config: normalizeConfigShape(response.config),

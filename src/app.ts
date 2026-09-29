@@ -190,10 +190,12 @@ export class MobileController {
       button("−", () => { interval.value = String(Math.max(1, Number(interval.value) - 1)); }, "icon-button"), interval,
       button("+", () => { interval.value = String(Math.min(1440, Number(interval.value) + 1)); }, "icon-button"),
       button("Save", () => void this.savePartial({ autoHarvest: { intervalMinutes: Math.max(1, Math.min(1440, Number(interval.value))) } }), "button small"));
+    const harvestNow = button("Harvest Now", () => void this.harvestNow(harvestNow), "button primary");
     const countdown = el("span", { text: this.countdown(), attrs: { "data-countdown": "true" } });
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),
       labeledToggle("Skip Gold crops", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
+      el("div", { className: "button-row" }, harvestNow),
       field("Interval minutes", intervalControls),
       el("dl", { className: "data-grid" }, el("dt", { text: "Next Harvest" }), el("dd", {}, countdown),
         el("dt", { text: "Interval" }), el("dd", { text: `${this.config.autoHarvest.intervalMinutes} minutes` })));
@@ -335,6 +337,22 @@ export class MobileController {
     if (!this.api) return;
     try { this.status = start ? await this.api.start() : await this.api.stop(); this.render(); this.toast(start ? "Service started" : "Service stopped", "success"); }
     catch (error) { this.toast(start ? `Start failed: ${this.message(error)}` : `Stop failed: ${this.message(error)}`, "error"); }
+  }
+
+  private async harvestNow(control: HTMLButtonElement): Promise<void> {
+    if (!this.api || control.disabled) return;
+    control.disabled = true;
+    control.textContent = "Harvesting…";
+    try {
+      this.status = await this.api.harvest();
+      this.workerError = null;
+      this.render();
+      this.toast("Harvest finished", "success");
+    } catch (error) {
+      control.disabled = false;
+      control.textContent = "Harvest Now";
+      this.toast(`Harvest failed: ${this.message(error)}`, "error");
+    }
   }
 
   private async savePartial(partial: object): Promise<void> {
