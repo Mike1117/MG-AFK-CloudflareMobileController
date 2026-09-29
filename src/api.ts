@@ -1,6 +1,7 @@
 import { normalizeConfigShape, type ConfigResponse, type ConfigUpdateResponse, type ShopsResponse, type StatusResponse } from "./types";
 
 export type ApiErrorKind = "unauthorized" | "unreachable" | "timeout" | "unsupported-schema" | "invalid-response" | "request-failed";
+const HARVEST_TIMEOUT_MS = 10 * 60_000;
 export class ApiError extends Error {
   constructor(readonly kind: ApiErrorKind, message: string, readonly status?: number) { super(message); }
 }
@@ -48,16 +49,16 @@ export class CloudflareApiClient {
   getShops(signal?: AbortSignal): Promise<ShopsResponse> { return this.send("GET", "shops", undefined, signal); }
   start(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "start", undefined, signal); }
   stop(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "stop", undefined, signal); }
-  harvest(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "harvest", undefined, signal); }
+  harvest(signal?: AbortSignal): Promise<StatusResponse> { return this.send("POST", "harvest", undefined, signal, HARVEST_TIMEOUT_MS); }
   putConfig(partial: object, signal?: AbortSignal): Promise<ConfigUpdateResponse> {
     return this.send<ConfigUpdateResponse>("PUT", "config", partial, signal).then((response) => ({
       ...response, config: normalizeConfigShape(response.config),
     }));
   }
 
-  private async send<T>(method: string, path: string, body?: object, externalSignal?: AbortSignal): Promise<T> {
+  private async send<T>(method: string, path: string, body?: object, externalSignal?: AbortSignal, timeoutMs = this.timeoutMs): Promise<T> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort("timeout"), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
     const abort = () => controller.abort(externalSignal?.reason);
     externalSignal?.addEventListener("abort", abort, { once: true });
     try {
