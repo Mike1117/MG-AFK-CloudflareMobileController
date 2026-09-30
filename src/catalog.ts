@@ -50,7 +50,10 @@ function addCategory(target: CatalogItem[], entries: unknown, itemType: ShopItem
 }
 
 export function normalizeCatalog(value: unknown): CatalogItem[] {
-  const root = record(value) ?? {};
+  const envelope = record(value) ?? {};
+  // Keep the client tolerant of the catalog API's occasional response
+  // envelope without changing the normalized item shape used by the UI.
+  const root = record(envelope.data) ?? record(envelope.catalog) ?? envelope;
   const result: CatalogItem[] = [];
   addCategory(result, root.plants, "Seed", true);
   addCategory(result, root.items, "Tool");
@@ -79,8 +82,14 @@ export class CatalogService {
   async plants(force = false): Promise<CatalogItem[]> { return (await this.get(force)).filter((item) => item.itemType === "Seed"); }
 
   private async load(): Promise<CatalogItem[]> {
-    const response = await this.fetcher("https://mg-api.ariedam.fr/data", { headers: { Accept: "application/json" } });
+    const response = await this.fetcher("https://mg-api.ariedam.fr/data", {
+      mode: "cors",
+      credentials: "omit",
+      headers: { Accept: "application/json" },
+    });
     if (!response.ok) throw new Error("Catalog could not be loaded.");
-    return normalizeCatalog(await response.json());
+    const catalog = normalizeCatalog(await response.json());
+    if (!catalog.length) throw new Error("Catalog returned no items.");
+    return catalog;
   }
 }

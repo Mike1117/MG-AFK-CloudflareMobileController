@@ -22,6 +22,11 @@ describe("catalog normalization", () => {
     expect(items.find((item) => item.itemId === "Lamp")?.name).toBe("Lamp");
   });
 
+  it("unwraps catalog/data response envelopes", () => {
+    expect(normalizeCatalog({ data: payload })).toHaveLength(7);
+    expect(normalizeCatalog({ catalog: payload })).toHaveLength(7);
+  });
+
   it("uses name fallbacks and humanization", () => {
     expect(normalizeCatalog(payload).find((item) => item.itemId === "BlueBerry")?.name).toBe("Blue Berry");
     expect(normalizeCatalog(payload).find((item) => item.itemId === "FancyBench")?.name).toBe("Fancy Bench");
