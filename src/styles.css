@@ -60,6 +60,9 @@ a { color: var(--accent); }
 .data-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 8px 14px; margin: 14px 0 0; font-size: 13px; }
 .data-grid dt { color: var(--muted); }
 .data-grid dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.subheading { margin: 18px 0 8px; color: #d7dae0; font-size: 13px; }
+.connection-history { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.connection-history li { display: grid; gap: 2px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; font-size: 12px; }
 
 .button, .icon-button, .segment, .item-card { border: 1px solid var(--border); background: var(--surface); transition: transform 100ms ease-out, background-color 100ms ease-out, border-color 100ms ease-out; }
 .button { min-height: 44px; border-radius: 10px; padding: 10px 15px; font-weight: 650; }

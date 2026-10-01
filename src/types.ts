@@ -34,6 +34,7 @@ export interface StatusResponse {
   state: string;
   playerId?: string | null;
   connectedAt?: number | null;
+  serviceStartedAt?: number | null;
   autoHarvest: { enabled: boolean; intervalMinutes: number };
   nextHarvestAt?: number | null;
   lastHarvest?: HarvestResult | null;
@@ -47,6 +48,30 @@ export interface StatusResponse {
     running: boolean; queueDepth: number; lastResult?: TroughResult | null;
   };
   lastError?: string | null;
+  connection?: ConnectionHealth;
+}
+
+export interface ConnectionHistoryEntry {
+  type: "connecting" | "connected" | "disconnected" | "reconnect_scheduled" | "connect_failed" | "welcome_timeout" | string;
+  at: number;
+  code?: number;
+  label?: string;
+  reason?: string;
+  attempt?: number;
+  delayMs?: number;
+  message?: string;
+  version?: string | null;
+  roomId?: string | null;
+}
+
+export interface ConnectionHealth {
+  connectedAt?: number | null;
+  lastMessageAt?: number | null;
+  version?: string | null;
+  roomId?: string | null;
+  clientConnectionAttempt?: number;
+  lastDisconnect?: { code?: number; label?: string; reason?: string; at?: number } | null;
+  history?: ConnectionHistoryEntry[];
 }
 
 export interface ConfigResponse { schemaVersion: number; config: SessionConfig }

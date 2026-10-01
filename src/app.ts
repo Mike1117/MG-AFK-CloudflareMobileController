@@ -186,6 +186,7 @@ export class MobileController {
       button(serviceEnabled ? "Stop Service" : "Start Service", () => void this.setService(!serviceEnabled), serviceEnabled ? "button danger" : "button primary")),
       this.dataGrid([["Player ID", status.playerId || "—"], ["Connected since", this.date(status.connectedAt)], ["Last error", status.lastError || "None"]]));
 
+    const connectionHealth = this.connectionDiagnostics(status);
     const intervalControls = el("div", { className: "stepper" },
       button("−", () => { interval.value = String(Math.max(1, Number(interval.value) - 1)); }, "icon-button"), interval,
       button("+", () => { interval.value = String(Math.min(1440, Number(interval.value) + 1)); }, "icon-button"),
@@ -194,7 +195,8 @@ export class MobileController {
     const countdown = el("span", { text: this.countdown(), attrs: { "data-countdown": "true" } });
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),
-      labeledToggle("Skip Gold crops", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
+      labeledToggle("Wait for Gold to freeze", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
+      el("p", { className: "field-hint", text: "Normal Gold is deferred; Gold Frozen is harvested." }),
       el("div", { className: "button-row" }, harvestNow),
       field("Interval minutes", intervalControls),
       el("dl", { className: "data-grid" }, el("dt", { text: "Next Harvest" }), el("dd", {}, countdown),
@@ -214,7 +216,26 @@ export class MobileController {
       ["Per crop", trough.perSpeciesLimit ? String(trough.perSpeciesLimit) : "—"], ["Runtime", trough.running ? "Running" : "Idle"],
       ["Queue", String(trough.queueDepth)], ["Last result", this.troughResult()],
     ]));
-    return el("section", { className: "overview-grid" }, service, autoHarvest, lastHarvest, autoBuy, troughCard);
+    return el("section", { className: "overview-grid" }, service, connectionHealth, autoHarvest, lastHarvest, autoBuy, troughCard);
+  }
+
+  private connectionDiagnostics(status: StatusResponse): HTMLElement {
+    const connection = status.connection;
+    const history = [...(connection?.history ?? [])].sort((a, b) => b.at - a.at).slice(0, 8);
+    const rows: Array<[string, string]> = [
+      ["Service uptime", this.duration(status.serviceStartedAt)],
+      ["Connection uptime", status.connected && connection?.connectedAt ? this.duration(connection.connectedAt) : "—"],
+      ["Last game activity", this.date(connection?.lastMessageAt)],
+      ["Version", connection?.version || "—"],
+      ["Reconnect attempt", String(connection?.clientConnectionAttempt ?? 0)],
+    ];
+    const historyNode = history.length
+      ? el("ul", { className: "connection-history" }, ...history.map((entry) => el("li", {},
+        el("strong", { text: this.connectionEventLabel(entry) }),
+        el("span", { className: "muted", text: `${this.date(entry.at)}${entry.reason ? ` — ${entry.reason}` : ""}` }),
+      )))
+      : el("p", { className: "muted", text: "No connection events yet." });
+    return this.card("Connection health", this.dataGrid(rows), el("h3", { className: "subheading", text: "Recent history" }), historyNode);
   }
 
   private protectedPage(): HTMLElement {
@@ -425,6 +446,19 @@ export class MobileController {
   private dataGrid(rows: Array<[string, string]>): HTMLElement { return el("dl", { className: "data-grid" }, ...rows.flatMap(([label, value]) => [el("dt", { text: label }), el("dd", { text: value })])); }
   private segment(label: string, active: boolean, action: () => void): HTMLButtonElement { return button(label, action, `segment${active ? " active" : ""}`); }
   private date(value?: number | null): string { return value ? new Date(value).toLocaleString() : "—"; }
+  private duration(start?: number | null): string {
+    if (!start) return "—";
+    let seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+    const days = Math.floor(seconds / 86400); seconds %= 86400;
+    const hours = Math.floor(seconds / 3600); seconds %= 3600;
+    const minutes = Math.floor(seconds / 60); seconds %= 60;
+    return `${days ? `${days}d ` : ""}${hours ? `${hours}h ` : ""}${minutes ? `${minutes}m ` : ""}${seconds}s`;
+  }
+  private connectionEventLabel(entry: { type: string; code?: number; label?: string; message?: string }): string {
+    if (entry.type === "disconnected") return `Disconnected${entry.code != null ? ` (${entry.code}${entry.label ? ` · ${entry.label}` : ""})` : ""}`;
+    if (entry.type === "connect_failed") return `Connect failed${entry.message ? `: ${entry.message}` : ""}`;
+    return entry.type.replaceAll("_", " ").replace(/\b\w/g, (match) => match.toUpperCase());
+  }
   private compact(value: number): string { return Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 }).format(value); }
   private countdown(): string { if (!this.status?.nextHarvestAt) return "Not scheduled"; const seconds = Math.max(0, Math.floor((this.status.nextHarvestAt - Date.now()) / 1000)); return seconds >= 3600 ? `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m ${seconds % 60}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`; }
   private updateCountdown(): void { const node = document.querySelector("[data-countdown]"); if (node) node.textContent = this.countdown(); }
