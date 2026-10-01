@@ -4,7 +4,7 @@ import { CredentialStore, type Credentials } from "./credentials";
 import { button, el, field, labeledToggle } from "./dom";
 import { Poller } from "./poller";
 import { categoryCounts, matches, sortCatalog, toggleTrough, troughQuota, wishlistIdentity, withUnknownPlants, withUnknownWishlist, type SortMode } from "./selection";
-import { defaultConfig, type CatalogItem, type SessionConfig, type ShopsResponse, type ShopItemType, type StatusResponse, type WishlistEntry } from "./types";
+import { defaultConfig, type CatalogItem, type PurchaseHistoryEntry, type SessionConfig, type ShopsResponse, type ShopItemType, type StatusResponse, type WishlistEntry } from "./types";
 
 type Page = "overview" | "protected" | "wishlist" | "trough" | "settings";
 type ProtectedSortMode = "selected" | SortMode;
@@ -15,6 +15,26 @@ export function previousConnectionTimestamps(history: unknown, currentConnectedA
     .sort((a, b) => b - a)
     .filter((timestamp, index, entries) => timestamp !== (currentConnectedAt ?? null) && entries.indexOf(timestamp) === index)
     .slice(0, 5);
+}
+
+export function normalizePurchaseHistory(history: unknown): PurchaseHistoryEntry[] {
+  if (!Array.isArray(history)) return [];
+  const seen = new Set<string>();
+  return history
+    .filter((entry): entry is PurchaseHistoryEntry => Boolean(entry && typeof entry === "object" &&
+      typeof (entry as PurchaseHistoryEntry).itemId === "string" &&
+      (entry as PurchaseHistoryEntry).itemId !== "WateringCan" &&
+      ["Seed", "Tool", "Egg", "Decor"].includes((entry as PurchaseHistoryEntry).itemType) &&
+      Number.isInteger((entry as PurchaseHistoryEntry).quantity) && (entry as PurchaseHistoryEntry).quantity > 0 &&
+      Number.isFinite((entry as PurchaseHistoryEntry).lastPurchasedAt)))
+    .sort((a, b) => b.lastPurchasedAt - a.lastPurchasedAt)
+    .filter((entry) => {
+      const key = `${entry.itemType}|${entry.itemId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 10);
 }
 
 export class MobileController {
@@ -213,11 +233,18 @@ export class MobileController {
       ["Completed", this.date(harvest.completedAt)], ["Harvested", String(harvest.harvested)], ["Sell runs", String(harvest.sellRuns)],
       ["Crops sold", String(harvest.soldCrops)], ["Gold skipped", String(harvest.skippedGold)], ["Failures", String(harvest.failures.length)],
     ]) : el("p", { className: "muted", text: "No harvest has completed yet." }));
+    const purchaseHistory = normalizePurchaseHistory(status.autoBuy.purchaseHistory);
+    const purchaseHistoryNode = purchaseHistory.length
+      ? el("ul", { className: "purchase-history" }, ...purchaseHistory.map((entry) => el("li", {},
+        el("strong", { text: `${humanizeItemId(entry.itemId)} × ${entry.quantity}` }),
+        el("span", { className: "muted", text: this.date(entry.lastPurchasedAt) }),
+      )))
+      : el("p", { className: "muted", text: "No purchases recorded yet." });
     const autoBuy = this.card("Auto Buy", this.dataGrid([
       ["State", status.autoBuy.enabled ? "Enabled" : "Disabled"], ["Mode", status.autoBuy.mode === "all" ? "Buy all stock" : "One per restock"],
       ["Wishlist", String(status.autoBuy.wishlistCount)], ["Runtime", status.autoBuy.running ? "Running" : "Idle"],
       ["Queue", String(status.autoBuy.queueDepth)], ["Last result", this.purchaseResult()],
-    ]));
+    ]), el("h3", { className: "subheading", text: "Recent purchases" }), purchaseHistoryNode);
     const troughState = !trough.stateAvailable ? "Waiting for live state" : !trough.troughPresent ? "Not available" : `${trough.itemCount} / ${trough.capacity}`;
     const troughCard = this.card("Feeding Trough", this.dataGrid([
       ["State", trough.enabled ? "Enabled" : "Disabled"], ["Wishlist", String(trough.wishlistCount)], ["Trough", troughState],
