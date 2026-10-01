@@ -66,6 +66,7 @@ export interface ConnectionHistoryEntry {
 
 export interface ConnectionHealth {
   connectedAt?: number | null;
+  connectedHistory?: number[];
   lastMessageAt?: number | null;
   version?: string | null;
   roomId?: string | null;

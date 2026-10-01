@@ -9,6 +9,14 @@ import { defaultConfig, type CatalogItem, type SessionConfig, type ShopsResponse
 type Page = "overview" | "protected" | "wishlist" | "trough" | "settings";
 type ProtectedSortMode = "selected" | SortMode;
 
+export function previousConnectionTimestamps(history: unknown, currentConnectedAt?: number | null): number[] {
+  return (Array.isArray(history) ? history : [])
+    .filter((timestamp): timestamp is number => typeof timestamp === "number" && Number.isFinite(timestamp))
+    .sort((a, b) => b - a)
+    .filter((timestamp, index, entries) => timestamp !== (currentConnectedAt ?? null) && entries.indexOf(timestamp) === index)
+    .slice(0, 5);
+}
+
 export class MobileController {
   private credentials: Credentials;
   private api: CloudflareApiClient | null = null;
@@ -221,7 +229,8 @@ export class MobileController {
 
   private connectionDiagnostics(status: StatusResponse): HTMLElement {
     const connection = status.connection;
-    const history = [...(connection?.history ?? [])].sort((a, b) => b.at - a.at).slice(0, 8);
+    const currentConnectedAt = connection?.connectedAt ?? status.connectedAt ?? null;
+    const previousConnections = previousConnectionTimestamps(connection?.connectedHistory, currentConnectedAt);
     const rows: Array<[string, string]> = [
       ["Service uptime", this.duration(status.serviceStartedAt)],
       ["Connection uptime", status.connected && connection?.connectedAt ? this.duration(connection.connectedAt) : "—"],
@@ -229,12 +238,12 @@ export class MobileController {
       ["Version", connection?.version || "—"],
       ["Reconnect attempt", String(connection?.clientConnectionAttempt ?? 0)],
     ];
-    const historyNode = history.length
-      ? el("ul", { className: "connection-history" }, ...history.map((entry) => el("li", {},
-        el("strong", { text: this.connectionEventLabel(entry) }),
-        el("span", { className: "muted", text: `${this.date(entry.at)}${entry.reason ? ` — ${entry.reason}` : ""}` }),
+    const historyNode = previousConnections.length
+      ? el("ul", { className: "connection-history" }, ...previousConnections.map((timestamp) => el("li", {},
+        el("strong", { text: "Connected" }),
+        el("span", { className: "muted", text: this.date(timestamp) }),
       )))
-      : el("p", { className: "muted", text: "No connection events yet." });
+      : el("p", { className: "muted", text: "No previous connections yet." });
     return this.card("Connection health", this.dataGrid(rows), el("h3", { className: "subheading", text: "Recent history" }), historyNode);
   }
 
