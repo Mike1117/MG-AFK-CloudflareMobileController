@@ -26,6 +26,8 @@ export interface HarvestResult {
   failures: Array<{ code: string }>;
 }
 
+export interface DailyCashflow { date: string; income: number; expense: number }
+
 export interface PurchaseResult { ok: boolean; code: string; itemId?: string; itemType?: string }
 export interface TroughResult { ok: boolean; code: string; itemId: string; species: string; timestamp: number }
 export interface StatusResponse {
@@ -37,6 +39,7 @@ export interface StatusResponse {
   connectedAt?: number | null;
   serviceStartedAt?: number | null;
   autoHarvest: { enabled: boolean; intervalMinutes: number };
+  dailyCashflow: DailyCashflow;
   nextHarvestAt?: number | null;
   lastHarvest?: HarvestResult | null;
   autoBuy: {

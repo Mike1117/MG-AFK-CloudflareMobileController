@@ -3,6 +3,7 @@ import { CatalogService, humanizeItemId } from "./catalog";
 import { CredentialStore, type Credentials } from "./credentials";
 import { button, el, field, labeledToggle } from "./dom";
 import { Poller } from "./poller";
+import { formatCompactNumber } from "./format";
 import { categoryCounts, matches, sortCatalog, toggleTrough, troughQuota, wishlistIdentity, withUnknownPlants, withUnknownWishlist, type SortMode } from "./selection";
 import { defaultConfig, type CatalogItem, type PurchaseHistoryEntry, type SessionConfig, type ShopsResponse, type ShopItemType, type StatusResponse, type WishlistEntry } from "./types";
 
@@ -213,6 +214,11 @@ export class MobileController {
       el("div", {}, el("div", { className: "status-title" }, el("span", { className: `dot ${this.statusColor()}` }), el("strong", { text: this.friendlyState() })), el("p", { className: "muted", text: this.statusDetail() })),
       button(serviceEnabled ? "Stop Service" : "Start Service", () => void this.setService(!serviceEnabled), serviceEnabled ? "button danger" : "button primary")),
       this.dataGrid([["Player ID", status.playerId || "—"], ["Connected since", this.date(status.connectedAt)], ["Last error", status.lastError || "None"]]));
+    const cashflow = status.dailyCashflow ?? { date: "", income: 0, expense: 0 };
+    const cashflowCard = this.card("Today's Cash Flow",
+      el("dl", { className: "cashflow-grid" },
+        el("dt", { text: "Income" }), el("dd", { className: "cashflow-income", text: `+${formatCompactNumber(cashflow.income)}` }),
+        el("dt", { text: "Expense" }), el("dd", { className: "cashflow-expense", text: `-${formatCompactNumber(cashflow.expense)}` })));
 
     const connectionHealth = this.connectionDiagnostics(status);
     const intervalControls = el("div", { className: "stepper" },
@@ -251,7 +257,7 @@ export class MobileController {
       ["Per crop", trough.perSpeciesLimit ? String(trough.perSpeciesLimit) : "—"], ["Runtime", trough.running ? "Running" : "Idle"],
       ["Queue", String(trough.queueDepth)], ["Last result", this.troughResult()],
     ]));
-    return el("section", { className: "overview-grid" }, service, connectionHealth, autoHarvest, lastHarvest, autoBuy, troughCard);
+    return el("section", { className: "overview-grid" }, service, cashflowCard, connectionHealth, autoHarvest, lastHarvest, autoBuy, troughCard);
   }
 
   private connectionDiagnostics(status: StatusResponse): HTMLElement {
