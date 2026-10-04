@@ -20,21 +20,23 @@ export function previousConnectionTimestamps(history: unknown, currentConnectedA
 
 export function normalizePurchaseHistory(history: unknown): PurchaseHistoryEntry[] {
   if (!Array.isArray(history)) return [];
-  const seen = new Set<string>();
   return history
-    .filter((entry): entry is PurchaseHistoryEntry => Boolean(entry && typeof entry === "object" &&
-      typeof (entry as PurchaseHistoryEntry).itemId === "string" &&
-      (entry as PurchaseHistoryEntry).itemId !== "WateringCan" &&
-      ["Seed", "Tool", "Egg", "Decor"].includes((entry as PurchaseHistoryEntry).itemType) &&
-      Number.isInteger((entry as PurchaseHistoryEntry).quantity) && (entry as PurchaseHistoryEntry).quantity > 0 &&
-      Number.isFinite((entry as PurchaseHistoryEntry).lastPurchasedAt)))
-    .sort((a, b) => b.lastPurchasedAt - a.lastPurchasedAt)
-    .filter((entry) => {
-      const key = `${entry.itemType}|${entry.itemId}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+    .flatMap((value): PurchaseHistoryEntry[] => {
+      if (!value || typeof value !== "object") return [];
+      const entry = value as Partial<PurchaseHistoryEntry>;
+      const itemId = typeof entry.itemId === "string" ? entry.itemId.trim() : "";
+      if (!itemId || itemId === "WateringCan" || !["Seed", "Tool", "Egg", "Decor"].includes(entry.itemType as string)) return [];
+      if (!Number.isInteger(entry.quantity) || (entry.quantity ?? 0) <= 0 || !Number.isFinite(entry.lastPurchasedAt) || (entry.lastPurchasedAt ?? 0) <= 0) return [];
+      return [{
+        itemId,
+        itemType: entry.itemType as ShopItemType,
+        ...(typeof entry.shop === "string" && entry.shop.trim() ? { shop: entry.shop.trim() } : {}),
+        ...(typeof entry.generation === "string" && entry.generation.trim() ? { generation: entry.generation.trim() } : {}),
+        quantity: entry.quantity!,
+        lastPurchasedAt: entry.lastPurchasedAt!,
+      }];
     })
+    .sort((a, b) => b.lastPurchasedAt - a.lastPurchasedAt)
     .slice(0, 10);
 }
 

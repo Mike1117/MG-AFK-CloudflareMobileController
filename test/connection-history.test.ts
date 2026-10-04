@@ -17,10 +17,27 @@ describe("persisted connection history presentation", () => {
 });
 
 describe("purchase history presentation", () => {
-  it("keeps merged newest-first entries, caps at ten, and excludes WateringCan", () => {
+  it("keeps newest-first entries, caps at ten, and excludes WateringCan", () => {
     const entries = Array.from({ length: 11 }, (_, index) => ({ itemId: `Item${index}`, itemType: "Tool" as const, quantity: index + 1, lastPurchasedAt: index + 1 }));
     expect(normalizePurchaseHistory([{ itemId: "WateringCan", itemType: "Tool", quantity: 2, lastPurchasedAt: 99 }, ...entries])).toHaveLength(10);
-    expect(normalizePurchaseHistory([{ itemId: "RainWardShard", itemType: "Tool", quantity: 3, lastPurchasedAt: 10 }, { itemId: "RainWardShard", itemType: "Tool", quantity: 1, lastPurchasedAt: 11 }])).toHaveLength(1);
+  });
+
+  it("preserves duplicate-looking same-item rounds without merging quantities", () => {
+    const entries = normalizePurchaseHistory([
+      { itemId: "RainWardShard", itemType: "Tool", shop: "rain", generation: "restock:r2", quantity: 1, lastPurchasedAt: 20 },
+      { itemId: "RainWardShard", itemType: "Tool", shop: "rain", generation: "restock:r1", quantity: 3, lastPurchasedAt: 10 },
+    ]);
+    expect(entries).toHaveLength(2);
+    expect(entries.map(({ quantity }) => quantity)).toEqual([1, 3]);
+    expect(entries.map(({ generation }) => generation)).toEqual(["restock:r2", "restock:r1"]);
+  });
+
+  it("keeps legacy entries without round identity visible", () => {
+    expect(normalizePurchaseHistory([
+      { itemId: "RainWardShard", itemType: "Tool", quantity: 2, lastPurchasedAt: 10 },
+    ])).toEqual([
+      { itemId: "RainWardShard", itemType: "Tool", quantity: 2, lastPurchasedAt: 10 },
+    ]);
   });
 
   it("handles missing or malformed history", () => {

@@ -8,7 +8,14 @@ export interface AutoHarvestConfig {
 }
 
 export interface WishlistEntry { itemId: string; itemType: ShopItemType }
-export interface PurchaseHistoryEntry { itemId: string; itemType: ShopItemType; quantity: number; lastPurchasedAt: number }
+export interface PurchaseHistoryEntry {
+  itemId: string;
+  itemType: ShopItemType;
+  shop?: string;
+  generation?: string;
+  quantity: number;
+  lastPurchasedAt: number;
+}
 export interface AutoBuyConfig { enabled: boolean; mode: "one" | "all"; wishlist: WishlistEntry[] }
 export interface AutoTroughConfig { enabled: boolean; wishlist: string[] }
 export interface SessionConfig {
