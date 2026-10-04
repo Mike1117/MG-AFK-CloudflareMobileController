@@ -27,6 +27,7 @@ export interface HarvestResult {
 }
 
 export interface DailyCashflow { date: string; income: number; expense: number }
+export interface DailyConnectedTime { date: string; connectedMs: number }
 
 export interface PurchaseResult { ok: boolean; code: string; itemId?: string; itemType?: string }
 export interface TroughResult { ok: boolean; code: string; itemId: string; species: string; timestamp: number }
@@ -78,6 +79,7 @@ export interface ConnectionHealth {
   clientConnectionAttempt?: number;
   lastDisconnect?: { code?: number; label?: string; reason?: string; at?: number } | null;
   history?: ConnectionHistoryEntry[];
+  dailyConnectedTime?: DailyConnectedTime;
 }
 
 export interface ConfigResponse { schemaVersion: number; config: SessionConfig }

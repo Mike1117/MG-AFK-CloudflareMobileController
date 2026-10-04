@@ -3,7 +3,7 @@ import { CatalogService, humanizeItemId } from "./catalog";
 import { CredentialStore, type Credentials } from "./credentials";
 import { button, el, field, labeledToggle } from "./dom";
 import { Poller } from "./poller";
-import { formatCompactNumber } from "./format";
+import { formatCompactNumber, formatDuration } from "./format";
 import { categoryCounts, matches, sortCatalog, toggleTrough, troughQuota, wishlistIdentity, withUnknownPlants, withUnknownWishlist, type SortMode } from "./selection";
 import { defaultConfig, type CatalogItem, type PurchaseHistoryEntry, type SessionConfig, type ShopsResponse, type ShopItemType, type StatusResponse, type WishlistEntry } from "./types";
 
@@ -267,6 +267,7 @@ export class MobileController {
     const rows: Array<[string, string]> = [
       ["Service uptime", this.duration(status.serviceStartedAt)],
       ["Connection uptime", status.connected && connection?.connectedAt ? this.duration(connection.connectedAt) : "—"],
+      ["Today's connected time", formatDuration(connection?.dailyConnectedTime?.connectedMs)],
       ["Last game activity", this.date(connection?.lastMessageAt)],
       ["Version", connection?.version || "—"],
       ["Reconnect attempt", String(connection?.clientConnectionAttempt ?? 0)],
