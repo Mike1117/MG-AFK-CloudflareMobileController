@@ -232,7 +232,15 @@ export class MobileController {
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),
       labeledToggle("Wait for Gold to freeze", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
-      el("p", { className: "field-hint", text: "Normal Gold is deferred; Gold Frozen is harvested." }),
+      el("div", { className: "dependent-setting" },
+        labeledToggle("Harvest Dawnlit / Amberlit Gold", this.config.autoHarvest.harvestDawnlitAmberlit,
+          (harvestDawnlitAmberlit) => void this.savePartial({ autoHarvest: { harvestDawnlitAmberlit } }),
+          !this.config.autoHarvest.skipGold)),
+      el("p", { className: "field-hint gold-policy-hint", text: !this.config.autoHarvest.skipGold
+        ? "Gold is harvested normally."
+        : this.config.autoHarvest.harvestDawnlitAmberlit
+          ? "Frozen is harvested. Dawnlit/Amberlit is also harvested unless Wet or Chilled."
+          : "Waits for Frozen Gold." }),
       el("div", { className: "button-row" }, harvestNow),
       field("Interval minutes", intervalControls),
       el("dl", { className: "data-grid" }, el("dt", { text: "Next Harvest" }), el("dd", {}, countdown),

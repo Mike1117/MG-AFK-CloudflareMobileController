@@ -4,6 +4,7 @@ export interface AutoHarvestConfig {
   enabled: boolean;
   intervalMinutes: number;
   skipGold: boolean;
+  harvestDawnlitAmberlit: boolean;
   protectedCropIds: string[];
 }
 
@@ -112,7 +113,7 @@ export interface CatalogItem {
 }
 
 export const defaultConfig = (): SessionConfig => ({
-  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, protectedCropIds: [] },
+  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: true, protectedCropIds: [] },
   autoBuy: { enabled: false, mode: "one", wishlist: [] },
   autoTrough: { enabled: false, wishlist: [] },
 });
@@ -124,6 +125,8 @@ export function normalizeConfigShape(value: unknown): SessionConfig {
     autoHarvest: {
       ...fallback.autoHarvest,
       ...(root.autoHarvest ?? {}),
+      harvestDawnlitAmberlit: typeof root.autoHarvest?.harvestDawnlitAmberlit === "boolean"
+        ? root.autoHarvest.harvestDawnlitAmberlit : true,
       protectedCropIds: Array.isArray(root.autoHarvest?.protectedCropIds) ? root.autoHarvest.protectedCropIds : [],
     },
     autoBuy: {

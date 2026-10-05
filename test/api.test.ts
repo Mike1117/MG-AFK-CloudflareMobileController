@@ -1,7 +1,7 @@
 import { ApiError, CloudflareApiClient, normalizeWorkerUrl } from "../src/api";
 
 const status = { schemaVersion: 1, connected: true, state: "connected", autoHarvest: { enabled: true, intervalMinutes: 10 }, dailyCashflow: { date: "2026-10-03", income: 123456, expense: 23456 }, connection: { dailyConnectedTime: { date: "2026-10-03", connectedMs: 45_209_000 } }, autoBuy: { enabled: false, mode: "one", wishlistCount: 0, running: false, queueDepth: 0 }, autoTrough: { enabled: false, wishlistCount: 0, capacity: 9, perSpeciesLimit: 0, stateAvailable: true, troughPresent: true, itemCount: 0, running: false, queueDepth: 0 } };
-const config = { schemaVersion: 1, config: { autoHarvest: { enabled: true, intervalMinutes: 10, skipGold: true, protectedCropIds: [] }, autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] } } };
+const config = { schemaVersion: 1, config: { autoHarvest: { enabled: true, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: true, protectedCropIds: [] }, autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] } } };
 const shops = { schemaVersion: 1, connected: true, shops: {} };
 
 describe("CloudflareApiClient", () => {
@@ -27,6 +27,7 @@ describe("CloudflareApiClient", () => {
     expect((await api.getStatus()).dailyCashflow).toEqual({ date: "2026-10-03", income: 123456, expense: 23456 });
     expect((await api.getStatus()).connection?.dailyConnectedTime).toEqual({ date: "2026-10-03", connectedMs: 45_209_000 });
     expect((await api.getConfig()).config.autoHarvest.intervalMinutes).toBe(10);
+    expect((await api.getConfig()).config.autoHarvest.harvestDawnlitAmberlit).toBe(true);
     expect((await api.getShops()).shops).toEqual({});
   });
 
@@ -69,5 +70,15 @@ describe("CloudflareApiClient", () => {
     const old = { schemaVersion: 1, config: { autoHarvest: config.config.autoHarvest, autoBuy: config.config.autoBuy } };
     const result = await new CloudflareApiClient("https://worker.example", "x", async () => Response.json(old)).getConfig();
     expect(result.config.autoTrough).toEqual({ enabled: false, wishlist: [] });
+  });
+
+  it("defaults legacy Gold policy to refined without overriding an explicit false", async () => {
+    const old = { ...config, config: { ...config.config, autoHarvest: { enabled: true, intervalMinutes: 10, skipGold: true, protectedCropIds: [] } } };
+    const api = new CloudflareApiClient("https://worker.example", "x", async () => Response.json(old));
+    expect((await api.getConfig()).config.autoHarvest.harvestDawnlitAmberlit).toBe(true);
+    const strict = new CloudflareApiClient("https://worker.example", "x", async () => Response.json({
+      ...config, config: { ...config.config, autoHarvest: { ...old.config.autoHarvest, harvestDawnlitAmberlit: false } },
+    }));
+    expect((await strict.getConfig()).config.autoHarvest.harvestDawnlitAmberlit).toBe(false);
   });
 });

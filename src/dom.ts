@@ -18,11 +18,12 @@ export function button(text: string, action: () => void, className = "button"): 
   return el("button", { className, text, attrs: { type: "button" }, on: { click: action } });
 }
 
-export function labeledToggle(label: string, checked: boolean, change: (checked: boolean) => void): HTMLElement {
+export function labeledToggle(label: string, checked: boolean, change: (checked: boolean) => void, disabled = false): HTMLElement {
   const input = el("input", { attrs: { type: "checkbox", role: "switch", "aria-label": label } });
   input.checked = checked;
+  input.disabled = disabled;
   input.addEventListener("change", () => change(input.checked));
-  return el("label", { className: "toggle-row" }, input, el("span", { className: "toggle-track" }), el("span", { text: label }));
+  return el("label", { className: `toggle-row${disabled ? " is-disabled" : ""}` }, input, el("span", { className: "toggle-track" }), el("span", { text: label }));
 }
 
 export function field(label: string, input: HTMLElement, hint?: string): HTMLElement {
