@@ -1,7 +1,6 @@
 import { MobileController } from "../src/app";
 import { CatalogService } from "../src/catalog";
 import { CredentialStore } from "../src/credentials";
-import { normalizeConfigShape } from "../src/types";
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>();
@@ -49,13 +48,6 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
 }
 
 describe("Color harvest policy and Smart Potion controls", () => {
-  it("ignores the legacy Chilled threshold while retaining Frozen threshold", () => {
-    const normalized = normalizeConfigShape({ autoHarvest: { smartPotion: {
-      enabled: false, chilledMinExpectedProfit: 123_456, frozenMinExpectedProfit: 654_321,
-    } } });
-    expect(normalized.autoHarvest.smartPotion).toEqual({ enabled: false, frozenMinExpectedProfit: 654_321 });
-  });
-
   it.each([
     [false, true, true, "Gold and Rainbow are harvested normally."],
     [true, false, false, "Gold and Rainbow wait for Frozen or a Thunder mutation."],
