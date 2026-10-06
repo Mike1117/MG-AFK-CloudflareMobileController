@@ -229,18 +229,37 @@ export class MobileController {
       button("Save", () => void this.savePartial({ autoHarvest: { intervalMinutes: Math.max(1, Math.min(1440, Number(interval.value))) } }), "button small"));
     const harvestNow = button("Harvest Now", () => void this.harvestNow(harvestNow), "button primary");
     const countdown = el("span", { text: this.countdown(), attrs: { "data-countdown": "true" } });
+    const smartPotion = this.config.autoHarvest.smartPotion;
+    const potionControlsDisabled = !smartPotion.enabled || !this.config.autoHarvest.skipGold;
+    const chilledProfit = el("input", { attrs: { type: "number", min: "0", step: "1", inputmode: "numeric", "aria-label": "Chilled min profit" } });
+    chilledProfit.value = String(smartPotion.chilledMinExpectedProfit);
+    chilledProfit.disabled = potionControlsDisabled;
+    chilledProfit.addEventListener("change", () => this.debounce("smart-potion-chilled", {
+      autoHarvest: { smartPotion: { chilledMinExpectedProfit: Math.max(0, Math.floor(Number(chilledProfit.value) || 0)) } },
+    }));
+    const frozenProfit = el("input", { attrs: { type: "number", min: "0", step: "1", inputmode: "numeric", "aria-label": "Frozen min profit" } });
+    frozenProfit.value = String(smartPotion.frozenMinExpectedProfit);
+    frozenProfit.disabled = potionControlsDisabled;
+    frozenProfit.addEventListener("change", () => this.debounce("smart-potion-frozen", {
+      autoHarvest: { smartPotion: { frozenMinExpectedProfit: Math.max(0, Math.floor(Number(frozenProfit.value) || 0)) } },
+    }));
+    const smartPotionSettings = el("div", { className: `smart-potion-settings${smartPotion.enabled ? "" : " is-disabled"}` },
+      labeledToggle("Smart Potions", smartPotion.enabled, (enabled) => void this.savePartial({ autoHarvest: { smartPotion: { enabled } } }), !this.config.autoHarvest.skipGold),
+      field("Chilled min profit", chilledProfit, "Minimum net coins after the potion cost."),
+      field("Frozen min profit", frozenProfit, "Minimum net coins for direct Frozen conversion."));
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),
       labeledToggle("Wait for Gold to freeze", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
       el("div", { className: "dependent-setting" },
-        labeledToggle("Harvest Dawnlit / Amberlit Gold", this.config.autoHarvest.harvestDawnlitAmberlit,
+        labeledToggle("Harvest Dawnlit / Amberlit Color", this.config.autoHarvest.harvestDawnlitAmberlit,
           (harvestDawnlitAmberlit) => void this.savePartial({ autoHarvest: { harvestDawnlitAmberlit } }),
           !this.config.autoHarvest.skipGold)),
       el("p", { className: "field-hint gold-policy-hint", text: !this.config.autoHarvest.skipGold
-        ? "Gold is harvested normally."
+        ? "Gold and Rainbow are harvested normally."
         : this.config.autoHarvest.harvestDawnlitAmberlit
-          ? "Frozen is harvested. Dawnlit/Amberlit is also harvested unless Wet or Chilled."
-          : "Waits for Frozen Gold." }),
+          ? "Frozen, Thunderstruck, and Thundercharged Color crops are harvested. Dawnlit/Amberlit may also harvest unless Wet or Chilled."
+          : "Gold and Rainbow wait for Frozen or a Thunder mutation." }),
+      smartPotionSettings,
       el("div", { className: "button-row" }, harvestNow),
       field("Interval minutes", intervalControls),
       el("dl", { className: "data-grid" }, el("dt", { text: "Next Harvest" }), el("dd", {}, countdown),

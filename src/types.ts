@@ -5,7 +5,14 @@ export interface AutoHarvestConfig {
   intervalMinutes: number;
   skipGold: boolean;
   harvestDawnlitAmberlit: boolean;
+  smartPotion: SmartPotionConfig;
   protectedCropIds: string[];
+}
+
+export interface SmartPotionConfig {
+  enabled: boolean;
+  chilledMinExpectedProfit: number;
+  frozenMinExpectedProfit: number;
 }
 
 export interface WishlistEntry { itemId: string; itemType: ShopItemType }
@@ -113,7 +120,7 @@ export interface CatalogItem {
 }
 
 export const defaultConfig = (): SessionConfig => ({
-  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: true, protectedCropIds: [] },
+  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: false, smartPotion: { enabled: true, chilledMinExpectedProfit: 0, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
   autoBuy: { enabled: false, mode: "one", wishlist: [] },
   autoTrough: { enabled: false, wishlist: [] },
 });
@@ -126,7 +133,14 @@ export function normalizeConfigShape(value: unknown): SessionConfig {
       ...fallback.autoHarvest,
       ...(root.autoHarvest ?? {}),
       harvestDawnlitAmberlit: typeof root.autoHarvest?.harvestDawnlitAmberlit === "boolean"
-        ? root.autoHarvest.harvestDawnlitAmberlit : true,
+        ? root.autoHarvest.harvestDawnlitAmberlit : false,
+      smartPotion: {
+        ...fallback.autoHarvest.smartPotion,
+        ...(root.autoHarvest?.smartPotion ?? {}),
+        enabled: typeof root.autoHarvest?.smartPotion?.enabled === "boolean" ? root.autoHarvest.smartPotion.enabled : true,
+        chilledMinExpectedProfit: normalizeProfit(root.autoHarvest?.smartPotion?.chilledMinExpectedProfit, 0),
+        frozenMinExpectedProfit: normalizeProfit(root.autoHarvest?.smartPotion?.frozenMinExpectedProfit, 0),
+      },
       protectedCropIds: Array.isArray(root.autoHarvest?.protectedCropIds) ? root.autoHarvest.protectedCropIds : [],
     },
     autoBuy: {
@@ -140,4 +154,9 @@ export function normalizeConfigShape(value: unknown): SessionConfig {
       wishlist: Array.isArray(root.autoTrough?.wishlist) ? root.autoTrough.wishlist : [],
     },
   };
+}
+
+function normalizeProfit(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : fallback;
 }

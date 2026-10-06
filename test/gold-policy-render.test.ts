@@ -24,7 +24,7 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
   const credentials = new CredentialStore(new MemoryStorage(), new MemoryStorage());
   credentials.save({ workerUrl: "https://worker.example", token: "test-token", rememberToken: false });
   const config = {
-    autoHarvest: { enabled: true, intervalMinutes: 10, skipGold, harvestDawnlitAmberlit, protectedCropIds: [] },
+    autoHarvest: { enabled: true, intervalMinutes: 10, skipGold, harvestDawnlitAmberlit, smartPotion: { enabled: true, chilledMinExpectedProfit: 0, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
     autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] },
   };
   const partials: unknown[] = [];
@@ -32,7 +32,10 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
     if (init?.method === "PUT") {
       const partial = JSON.parse(String(init.body));
       partials.push(partial);
-      Object.assign(config.autoHarvest, partial.autoHarvest ?? {});
+      const autoHarvest = partial.autoHarvest ?? {};
+      const { smartPotion: smartPartial, ...harvestPartial } = autoHarvest;
+      Object.assign(config.autoHarvest, harvestPartial);
+      Object.assign(config.autoHarvest.smartPotion, smartPartial ?? {});
       return Response.json({ schemaVersion: 1, config, status });
     }
     return Response.json(String(input).endsWith("/config") ? { schemaVersion: 1, config } : status);
@@ -46,14 +49,14 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
 
 describe("Wait-for-Gold secondary control", () => {
   it.each([
-    [false, true, true, "Gold is harvested normally."],
-    [true, false, false, "Waits for Frozen Gold."],
-    [true, true, false, "Frozen is harvested. Dawnlit/Amberlit is also harvested unless Wet or Chilled."],
+    [false, true, true, "Gold and Rainbow are harvested normally."],
+    [true, false, false, "Gold and Rainbow wait for Frozen or a Thunder mutation."],
+    [true, true, false, "Frozen, Thunderstruck, and Thundercharged Color crops are harvested. Dawnlit/Amberlit may also harvest unless Wet or Chilled."],
   ] as const)("renders dependent control and accurate hint for primary=%s secondary=%s", async (primary, secondary, disabled, hint) => {
     const view = await mount(primary, secondary);
     try {
       const first = view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!;
-      const second = view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')!;
+      const second = view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')!;
       expect(Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
       expect(second.closest(".dependent-setting")).not.toBeNull();
       expect(second.disabled).toBe(disabled);
@@ -65,7 +68,7 @@ describe("Wait-for-Gold secondary control", () => {
   it("saves only the secondary field and keeps it when primary is turned off and back on", async () => {
     const view = await mount(true, false);
     try {
-      const secondary = view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')!;
+      const secondary = view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')!;
       secondary.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(1));
       expect(view.partials[0]).toEqual({ autoHarvest: { harvestDawnlitAmberlit: true } });
@@ -73,13 +76,33 @@ describe("Wait-for-Gold secondary control", () => {
       view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(2));
       expect(view.partials[1]).toEqual({ autoHarvest: { skipGold: false } });
-      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')?.disabled).toBe(true));
-      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')?.checked).toBe(true);
+      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.disabled).toBe(true));
+      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.checked).toBe(true);
 
       view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(3));
-      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')?.disabled).toBe(false));
-      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Gold"]')?.checked).toBe(true);
+      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.disabled).toBe(false));
+      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.checked).toBe(true);
+    } finally { view.cleanup(); }
+  });
+
+  it("shows smart potion controls, debounces partial threshold updates, and preserves disabled values", async () => {
+    const view = await mount(true, false);
+    try {
+      expect(view.root.querySelector('input[aria-label="Smart Potions"]')).not.toBeNull();
+      const chilled = view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')!;
+      const frozen = view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')!;
+      expect(chilled.value).toBe("0");
+      chilled.value = "250000";
+      chilled.dispatchEvent(new Event("change"));
+      await vi.waitFor(() => expect(view.partials).toHaveLength(1), { timeout: 1500 });
+      expect(view.partials[0]).toEqual({ autoHarvest: { smartPotion: { chilledMinExpectedProfit: 250000 } } });
+      view.root.querySelector<HTMLInputElement>('input[aria-label="Smart Potions"]')!.click();
+      await vi.waitFor(() => expect(view.partials).toHaveLength(2));
+      expect(view.partials[1]).toEqual({ autoHarvest: { smartPotion: { enabled: false } } });
+      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')?.disabled).toBe(true));
+      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')?.value).toBe("250000");
+      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')?.disabled).toBe(true);
     } finally { view.cleanup(); }
   });
 });

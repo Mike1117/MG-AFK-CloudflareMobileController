@@ -94,6 +94,10 @@ a { color: var(--accent); }
 .dependent-setting .toggle-row.is-disabled { cursor: not-allowed; opacity: .58; }
 .dependent-setting .toggle-row input:disabled + .toggle-track { background: var(--border); }
 .gold-policy-hint { margin: 2px 0 0 30px; }
+.smart-potion-settings { margin: 8px 0 0 18px; padding: 9px 12px 12px; border-left: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 55%, transparent); border-radius: 0 10px 10px 0; }
+.smart-potion-settings .field { margin-top: 8px; }
+.smart-potion-settings input[type="number"] { width: 100%; }
+.smart-potion-settings.is-disabled .field { opacity: .56; }
 .check-row input { min-height: auto; accent-color: var(--accent); }
 .field { display: grid; gap: 7px; margin-top: 14px; }
 .field-label { color: #d7dae0; font-weight: 600; }
