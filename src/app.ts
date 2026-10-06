@@ -231,12 +231,6 @@ export class MobileController {
     const countdown = el("span", { text: this.countdown(), attrs: { "data-countdown": "true" } });
     const smartPotion = this.config.autoHarvest.smartPotion;
     const potionControlsDisabled = !smartPotion.enabled || !this.config.autoHarvest.skipGold;
-    const chilledProfit = el("input", { attrs: { type: "number", min: "0", step: "1", inputmode: "numeric", "aria-label": "Chilled min profit" } });
-    chilledProfit.value = String(smartPotion.chilledMinExpectedProfit);
-    chilledProfit.disabled = potionControlsDisabled;
-    chilledProfit.addEventListener("change", () => this.debounce("smart-potion-chilled", {
-      autoHarvest: { smartPotion: { chilledMinExpectedProfit: Math.max(0, Math.floor(Number(chilledProfit.value) || 0)) } },
-    }));
     const frozenProfit = el("input", { attrs: { type: "number", min: "0", step: "1", inputmode: "numeric", "aria-label": "Frozen min profit" } });
     frozenProfit.value = String(smartPotion.frozenMinExpectedProfit);
     frozenProfit.disabled = potionControlsDisabled;
@@ -245,7 +239,7 @@ export class MobileController {
     }));
     const smartPotionSettings = el("div", { className: `smart-potion-settings${smartPotion.enabled ? "" : " is-disabled"}` },
       labeledToggle("Smart Potions", smartPotion.enabled, (enabled) => void this.savePartial({ autoHarvest: { smartPotion: { enabled } } }), !this.config.autoHarvest.skipGold),
-      field("Chilled min profit", chilledProfit, "Minimum net coins after the potion cost."),
+      el("p", { className: "smart-potion-hint", text: "Wet Gold/Rainbow uses Chilled Potion automatically. Frozen Potion is used only when expected net profit meets this threshold." }),
       field("Frozen min profit", frozenProfit, "Minimum net coins for direct Frozen conversion."));
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),

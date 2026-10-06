@@ -1,7 +1,7 @@
 import { ApiError, CloudflareApiClient, normalizeWorkerUrl } from "../src/api";
 
 const status = { schemaVersion: 1, connected: true, state: "connected", autoHarvest: { enabled: true, intervalMinutes: 10 }, dailyCashflow: { date: "2026-10-03", income: 123456, expense: 23456 }, connection: { dailyConnectedTime: { date: "2026-10-03", connectedMs: 45_209_000 } }, autoBuy: { enabled: false, mode: "one", wishlistCount: 0, running: false, queueDepth: 0 }, autoTrough: { enabled: false, wishlistCount: 0, capacity: 9, perSpeciesLimit: 0, stateAvailable: true, troughPresent: true, itemCount: 0, running: false, queueDepth: 0 } };
-const config = { schemaVersion: 1, config: { autoHarvest: { enabled: true, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: true, smartPotion: { enabled: true, chilledMinExpectedProfit: 0, frozenMinExpectedProfit: 0 }, protectedCropIds: [] }, autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] } } };
+const config = { schemaVersion: 1, config: { autoHarvest: { enabled: true, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: true, smartPotion: { enabled: true, frozenMinExpectedProfit: 0 }, protectedCropIds: [] }, autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] } } };
 const shops = { schemaVersion: 1, connected: true, shops: {} };
 
 describe("CloudflareApiClient", () => {

@@ -11,7 +11,6 @@ export interface AutoHarvestConfig {
 
 export interface SmartPotionConfig {
   enabled: boolean;
-  chilledMinExpectedProfit: number;
   frozenMinExpectedProfit: number;
 }
 
@@ -120,7 +119,7 @@ export interface CatalogItem {
 }
 
 export const defaultConfig = (): SessionConfig => ({
-  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: false, smartPotion: { enabled: true, chilledMinExpectedProfit: 0, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
+  autoHarvest: { enabled: false, intervalMinutes: 10, skipGold: true, harvestDawnlitAmberlit: false, smartPotion: { enabled: true, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
   autoBuy: { enabled: false, mode: "one", wishlist: [] },
   autoTrough: { enabled: false, wishlist: [] },
 });
@@ -136,9 +135,7 @@ export function normalizeConfigShape(value: unknown): SessionConfig {
         ? root.autoHarvest.harvestDawnlitAmberlit : false,
       smartPotion: {
         ...fallback.autoHarvest.smartPotion,
-        ...(root.autoHarvest?.smartPotion ?? {}),
         enabled: typeof root.autoHarvest?.smartPotion?.enabled === "boolean" ? root.autoHarvest.smartPotion.enabled : true,
-        chilledMinExpectedProfit: normalizeProfit(root.autoHarvest?.smartPotion?.chilledMinExpectedProfit, 0),
         frozenMinExpectedProfit: normalizeProfit(root.autoHarvest?.smartPotion?.frozenMinExpectedProfit, 0),
       },
       protectedCropIds: Array.isArray(root.autoHarvest?.protectedCropIds) ? root.autoHarvest.protectedCropIds : [],

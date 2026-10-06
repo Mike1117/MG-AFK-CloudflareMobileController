@@ -1,6 +1,7 @@
 import { MobileController } from "../src/app";
 import { CatalogService } from "../src/catalog";
 import { CredentialStore } from "../src/credentials";
+import { normalizeConfigShape } from "../src/types";
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>();
@@ -24,7 +25,7 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
   const credentials = new CredentialStore(new MemoryStorage(), new MemoryStorage());
   credentials.save({ workerUrl: "https://worker.example", token: "test-token", rememberToken: false });
   const config = {
-    autoHarvest: { enabled: true, intervalMinutes: 10, skipGold, harvestDawnlitAmberlit, smartPotion: { enabled: true, chilledMinExpectedProfit: 0, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
+    autoHarvest: { enabled: true, intervalMinutes: 10, skipGold, harvestDawnlitAmberlit, smartPotion: { enabled: true, frozenMinExpectedProfit: 0 }, protectedCropIds: [] },
     autoBuy: { enabled: false, mode: "one", wishlist: [] }, autoTrough: { enabled: false, wishlist: [] },
   };
   const partials: unknown[] = [];
@@ -48,6 +49,13 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
 }
 
 describe("Color harvest policy and Smart Potion controls", () => {
+  it("ignores the legacy Chilled threshold while retaining Frozen threshold", () => {
+    const normalized = normalizeConfigShape({ autoHarvest: { smartPotion: {
+      enabled: false, chilledMinExpectedProfit: 123_456, frozenMinExpectedProfit: 654_321,
+    } } });
+    expect(normalized.autoHarvest.smartPotion).toEqual({ enabled: false, frozenMinExpectedProfit: 654_321 });
+  });
+
   it.each([
     [false, true, true, "Gold and Rainbow are harvested normally."],
     [true, false, false, "Gold and Rainbow wait for Frozen or a Thunder mutation."],
@@ -86,23 +94,23 @@ describe("Color harvest policy and Smart Potion controls", () => {
     } finally { view.cleanup(); }
   });
 
-  it("shows smart potion controls, debounces partial threshold updates, and preserves disabled values", async () => {
+  it("shows only the Frozen threshold, debounces its partial update, and preserves it when disabled", async () => {
     const view = await mount(true, false);
     try {
       expect(view.root.querySelector('input[aria-label="Smart Potions"]')).not.toBeNull();
-      const chilled = view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')!;
+      expect(view.root.querySelector('input[aria-label="Chilled min profit"]')).toBeNull();
       const frozen = view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')!;
-      expect(chilled.value).toBe("0");
-      chilled.value = "250000";
-      chilled.dispatchEvent(new Event("change"));
+      expect(frozen.value).toBe("0");
+      expect(view.root.querySelector(".smart-potion-hint")?.textContent).toContain("Wet Gold/Rainbow uses Chilled Potion automatically");
+      frozen.value = "250000";
+      frozen.dispatchEvent(new Event("change"));
       await vi.waitFor(() => expect(view.partials).toHaveLength(1), { timeout: 1500 });
-      expect(view.partials[0]).toEqual({ autoHarvest: { smartPotion: { chilledMinExpectedProfit: 250000 } } });
+      expect(view.partials[0]).toEqual({ autoHarvest: { smartPotion: { frozenMinExpectedProfit: 250000 } } });
       view.root.querySelector<HTMLInputElement>('input[aria-label="Smart Potions"]')!.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(2));
       expect(view.partials[1]).toEqual({ autoHarvest: { smartPotion: { enabled: false } } });
-      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')?.disabled).toBe(true));
-      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Chilled min profit"]')?.value).toBe("250000");
-      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')?.disabled).toBe(true);
+      await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')?.disabled).toBe(true));
+      expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Frozen min profit"]')?.value).toBe("250000");
     } finally { view.cleanup(); }
   });
 });
