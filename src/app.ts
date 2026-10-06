@@ -249,7 +249,7 @@ export class MobileController {
       field("Frozen min profit", frozenProfit, "Minimum net coins for direct Frozen conversion."));
     const autoHarvest = this.card("Auto Harvest",
       labeledToggle("Enabled", this.config.autoHarvest.enabled, (enabled) => void this.savePartial({ autoHarvest: { enabled } })),
-      labeledToggle("Wait for Gold to freeze", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
+      labeledToggle("Wait for Color to freeze", this.config.autoHarvest.skipGold, (skipGold) => void this.savePartial({ autoHarvest: { skipGold } })),
       el("div", { className: "dependent-setting" },
         labeledToggle("Harvest Dawnlit / Amberlit Color", this.config.autoHarvest.harvestDawnlitAmberlit,
           (harvestDawnlitAmberlit) => void this.savePartial({ autoHarvest: { harvestDawnlitAmberlit } }),
@@ -335,7 +335,7 @@ export class MobileController {
     });
     return el("section", {},
       el("div", { className: "page-intro" },
-        el("p", { text: "Choose crops Auto Harvest must leave untouched. Gold is controlled separately on Overview." }),
+        el("p", { text: "Choose crops Auto Harvest must leave untouched. Gold and Rainbow are controlled separately on Overview." }),
         el("strong", { text: `${selected.size} selected` })),
       this.catalogToolbar("protected", options), this.catalogStateOr(grid));
   }

@@ -47,7 +47,7 @@ async function mount(skipGold: boolean, harvestDawnlitAmberlit: boolean) {
   return { root, app, partials, cleanup: () => { app.dispose(); root.remove(); vi.unstubAllGlobals(); } };
 }
 
-describe("Wait-for-Gold secondary control", () => {
+describe("Color harvest policy and Smart Potion controls", () => {
   it.each([
     [false, true, true, "Gold and Rainbow are harvested normally."],
     [true, false, false, "Gold and Rainbow wait for Frozen or a Thunder mutation."],
@@ -55,7 +55,7 @@ describe("Wait-for-Gold secondary control", () => {
   ] as const)("renders dependent control and accurate hint for primary=%s secondary=%s", async (primary, secondary, disabled, hint) => {
     const view = await mount(primary, secondary);
     try {
-      const first = view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!;
+      const first = view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Color to freeze"]')!;
       const second = view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')!;
       expect(Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
       expect(second.closest(".dependent-setting")).not.toBeNull();
@@ -73,13 +73,13 @@ describe("Wait-for-Gold secondary control", () => {
       await vi.waitFor(() => expect(view.partials).toHaveLength(1));
       expect(view.partials[0]).toEqual({ autoHarvest: { harvestDawnlitAmberlit: true } });
 
-      view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!.click();
+      view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Color to freeze"]')!.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(2));
       expect(view.partials[1]).toEqual({ autoHarvest: { skipGold: false } });
       await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.disabled).toBe(true));
       expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.checked).toBe(true);
 
-      view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Gold to freeze"]')!.click();
+      view.root.querySelector<HTMLInputElement>('input[aria-label="Wait for Color to freeze"]')!.click();
       await vi.waitFor(() => expect(view.partials).toHaveLength(3));
       await vi.waitFor(() => expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.disabled).toBe(false));
       expect(view.root.querySelector<HTMLInputElement>('input[aria-label="Harvest Dawnlit / Amberlit Color"]')?.checked).toBe(true);
